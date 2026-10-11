@@ -11,6 +11,9 @@ var level := 1
 var xp := 0
 var power := 0
 var hp := 100
+var money := 0
+var quests: Array[Dictionary] = []
+var active_quest := -1
 var training := false
 var attacking := false
 var animation_time := 0.0
@@ -23,6 +26,7 @@ func _ready() -> void:
 	_build_world()
 	_build_player()
 	_build_ui()
+	_setup_quests()
 	_load_progress()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
@@ -72,6 +76,15 @@ func _build_npc(pos: Vector3, npc_name: String, outfit_color: Color, hostile: bo
 	var npc := Node3D.new()
 	npc.name = npc_name.replace(" ", "")
 	npc.position = pos
+	npc.add_to_group("quest_npcs")
+	if npc_name == "Island Guide":
+		npc.set_meta("quest_kind", "guide")
+	elif npc_name == "Trainer":
+		npc.set_meta("quest_kind", "trainer")
+	elif npc_name == "Merchant":
+		npc.set_meta("quest_kind", "merchant")
+	else:
+		npc.set_meta("quest_kind", "bandit")
 	add_child(npc)
 	# Simple humanoid proportions assembled from meshes; these are game objects, not poster art.
 	_add_character_part(npc, "Body", Vector3(0, 1.0, 0), Vector3(0.72, 0.92, 0.38), outfit_color, "box")
@@ -240,6 +253,7 @@ func _build_ui() -> void:
 	status_label.add_theme_color_override("font_color", Color(1, 0.95, 0.55))
 	layer.add_child(status_label)
 	_build_move_pad(layer)
+	_add_button(layer, "QUEST", Vector2(-245, -325), "quest")
 	_add_button(layer, "JUMP", Vector2(-245, -160), "jump")
 	_add_button(layer, "TRAIN", Vector2(-245, -105), "train")
 	_add_button(layer, "ATTACK", Vector2(-245, -50), "attack")
@@ -275,6 +289,8 @@ func _add_button(layer: CanvasLayer, text_value: String, offset: Vector2, action
 		b.pressed.connect(_save_progress)
 	elif action == "load":
 		b.pressed.connect(_load_progress)
+	elif action == "quest":
+		b.pressed.connect(_interact_quest)
 	else:
 		b.pressed.connect(_attack)
 
@@ -343,7 +359,9 @@ func _attack() -> void:
 			hit_count += 1
 	if hit_count > 0:
 		xp += hit_count * 5
+		money += hit_count * 15
 		power += hit_count
+		_check_quest_progress("bandit", hit_count)
 		status_label.text = "POWER HIT! +%d power" % hit_count
 	else:
 		status_label.text = "Get closer to a red enemy!"
@@ -355,6 +373,8 @@ func _save_progress() -> void:
 		"xp": xp,
 		"power": power,
 		"hp": hp,
+		"money": money,
+		"quests": quests,
 		"player_x": player.position.x if is_instance_valid(player) else 0.0,
 		"player_y": player.position.y if is_instance_valid(player) else 1.5,
 		"player_z": player.position.z if is_instance_valid(player) else 5.0
@@ -372,6 +392,13 @@ func _load_progress() -> void:
 	xp = maxi(0, int(data.get("xp", 0)))
 	power = maxi(0, int(data.get("power", 0)))
 	hp = clampi(int(data.get("hp", 100)), 1, 100)
+	money = maxi(0, int(data.get("money", 0)))
+	var saved_quests: Variant = data.get("quests", [])
+	if saved_quests is Array:
+		quests.clear()
+		for item in saved_quests:
+			if item is Dictionary:
+				quests.append(item)
 	if is_instance_valid(player):
 		player.position = Vector3(
 			float(data.get("player_x", 0.0)),
@@ -382,6 +409,60 @@ func _load_progress() -> void:
 		status_label.text = "Progress loaded!"
 	_refresh_hud()
 
+func _setup_quests() -> void:
+	if quests.is_empty():
+		quests = [
+			{"title":"First Steps","description":"Talk to the Island Guide","kind":"talk","goal":1,"progress":0,"reward_xp":20,"reward_money":25,"done":false},
+			{"title":"Bandit Trouble","description":"Defeat 3 bandits","kind":"bandit","goal":3,"progress":0,"reward_xp":35,"reward_money":60,"done":false},
+			{"title":"Meet the Trainer","description":"Talk to the Trainer","kind":"trainer","goal":1,"progress":0,"reward_xp":25,"reward_money":30,"done":false}
+		]
+
+func _interact_quest() -> void:
+	var nearest_name := ""
+	var nearest_distance := 999.0
+	for npc in get_tree().get_nodes_in_group("quest_npcs"):
+		if is_instance_valid(npc):
+			var d := player.global_position.distance_to(npc.global_position)
+			if d < nearest_distance:
+				nearest_distance = d
+				nearest_name = str(npc.get_meta("quest_kind", ""))
+	if nearest_distance > 4.0:
+		status_label.text = "Get close to an NPC, then tap QUEST."
+		return
+	if nearest_name == "guide":
+		_check_quest_progress("talk", 1)
+		status_label.text = "Guide: Welcome! Your first quest is to explore the island."
+	elif nearest_name == "trainer":
+		_check_quest_progress("trainer", 1)
+		status_label.text = "Trainer: Train and grow stronger, adventurer!"
+	elif nearest_name == "merchant":
+		if money >= 20:
+			money -= 20
+			hp = 100
+			status_label.text = "Merchant: Restored your HP for 20 coins!"
+		else:
+			status_label.text = "Merchant: You need 20 coins to restore HP."
+	_refresh_hud()
+
+func _check_quest_progress(kind: String, amount: int) -> void:
+	for i in range(quests.size()):
+		var quest: Dictionary = quests[i]
+		if quest.get("kind", "") != kind or bool(quest.get("done", false)):
+			continue
+		var progress := mini(int(quest.get("goal", 1)), int(quest.get("progress", 0)) + amount)
+		quest["progress"] = progress
+		if progress >= int(quest.get("goal", 1)):
+			quest["done"] = true
+			xp += int(quest.get("reward_xp", 0))
+			money += int(quest.get("reward_money", 0))
+			status_label.text = "QUEST COMPLETE! +%d XP, +%d coins" % [int(quest.get("reward_xp", 0)), int(quest.get("reward_money", 0))]
+			while xp >= level * 10:
+				xp -= level * 10
+				level += 1
+				power += 2
+		quests[i] = quest
+	_refresh_hud()
+
 func _refresh_hud() -> void:
 	if is_instance_valid(hud):
-		hud.text = "BLOCK VERSE   |   LVL %d   |   XP %d/%d   |   POWER %d   |   HP %d" % [level, xp, level * 10, power, hp]
+		hud.text = "BLOCK VERSE | LVL %d | XP %d/%d | POWER %d | HP %d | COINS %d" % [level, xp, level * 10, power, hp, money]
