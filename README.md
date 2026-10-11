@@ -1,16 +1,26 @@
 # Block Verse
 
-A mobile-friendly 3D block-world power simulator prototype made with Godot 4.
+A mobile-first 3D block-world power simulator prototype made with Godot 4.
 
-## Features in this first playable build
-- Procedurally built block arena
-- Third-person player movement and camera
-- Training area to gain power and XP
-- Enemy cubes that can be attacked
-- Level and power HUD
-- On-screen mobile controls plus keyboard controls
+## Features in the current source
+- Procedurally built block arena and third-person camera
+- Player movement, jump, and on-screen mobile buttons
+- Training toggle for XP and levels
+- Nearby enemy attacks and power rewards
+- HUD for level, XP, power, and health
+- Local save/load support for player progress
 
 ## Open in Godot
-Download the repository as a ZIP, extract it, then import the extracted folder in Godot 4.x. Open `project.godot` and press Play.
+1. Download this repository as a ZIP from GitHub and extract it.
+2. In Godot 4.x, choose **Import** and select the folder containing `project.godot`.
+3. Open the project and press Play.
 
-This is a first playable prototype; test it in the Godot editor and expect to tune performance and controls for your device.
+## Controls
+- Move: WASD / arrow keys or on-screen direction buttons
+- Jump: Space or JUMP
+- TRAIN: toggle training XP
+- ATTACK: attack nearby red enemies
+- SAVE / LOAD: save or restore progress on this device
+
+## Important status
+This is still an in-progress prototype. It has **not yet been run in Godot or exported** in this environment. Android touch layout, combat balance, and Web export need testing before calling it a release.
