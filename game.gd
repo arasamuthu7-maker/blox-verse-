@@ -33,21 +33,37 @@ func _build_world() -> void:
 	environment.sky = Sky.new()
 	environment.sky.sky_material = ProceduralSkyMaterial.new()
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.7, 0.78, 0.9)
-	environment.ambient_light_energy = 0.8
+	environment.ambient_light_color = Color(0.72, 0.82, 1.0)
+	environment.ambient_light_energy = 0.9
 	env.environment = environment
 	add_child(env)
-	_make_box(Vector3(0, -0.6, 0), Vector3(arena_size, 1, arena_size), Color(0.18, 0.58, 0.28), true)
-	for x in range(-12, 13, 4):
-		for z in range(-12, 13, 4):
-			if abs(x) < 4 and abs(z) < 4:
-				continue
-			_make_box(Vector3(x, 0.15, z), Vector3(1.1, 1.1, 1.1), Color(0.25, 0.55, 0.85), false)
+
+	# Natural island base, not a cube/block terrain.
+	_make_box(Vector3(0, -0.6, 0), Vector3(arena_size, 1, arena_size), Color(0.12, 0.42, 0.23), true)
+	_make_box(Vector3(0, -0.1, 0), Vector3(24, 0.25, 24), Color(0.22, 0.58, 0.29), false)
+	_make_box(Vector3(0, -0.2, 13.2), Vector3(28, 0.35, 2.0), Color(0.85, 0.75, 0.49), false)
+	_make_box(Vector3(0, -0.2, -13.2), Vector3(28, 0.35, 2.0), Color(0.85, 0.75, 0.49), false)
+	_make_box(Vector3(13.2, -0.2, 0), Vector3(2.0, 0.35, 28), Color(0.85, 0.75, 0.49), false)
+	_make_box(Vector3(-13.2, -0.2, 0), Vector3(2.0, 0.35, 28), Color(0.85, 0.75, 0.49), false)
+
+	# Trees use cylinders and spheres for a more natural island silhouette.
+	for i in range(14):
+		var angle := float(i) * TAU / 14.0
+		var px := cos(angle) * 10.0
+		var pz := sin(angle) * 10.0
+		_make_cylinder(Vector3(px, 0.65, pz), 0.22, 1.5, Color(0.34, 0.19, 0.09), true)
+		_make_sphere(Vector3(px, 1.75, pz), Vector3(1.15, 1.35, 1.15), Color(0.08, 0.38 + float(i % 3) * 0.06, 0.16), false)
+
+	# Low rocky hills and a central training platform.
+	_make_sphere(Vector3(-8.5, 0.3, -5.5), Vector3(3.5, 1.3, 2.8), Color(0.35, 0.39, 0.31), false)
+	_make_sphere(Vector3(8.5, 0.55, -6.5), Vector3(3.8, 1.8, 3.0), Color(0.42, 0.43, 0.37), false)
+	_make_cylinder(Vector3(0, 0.05, -9.0), 2.5, 0.25, Color(0.22, 0.35, 0.55), false)
+	_make_cylinder(Vector3(0, 0.22, -9.0), 1.7, 0.12, Color(0.15, 0.65, 1.0), false)
+
 	for i in range(4):
-		var e := _make_box(Vector3(-7 + i * 4, 1, -7), Vector3(1.5, 2, 1.5), Color(0.9, 0.18, 0.2), true)
+		var e := _make_box(Vector3(-7 + i * 4, 1, -4), Vector3(1.1, 1.8, 1.1), Color(0.82, 0.16, 0.2), true)
 		e.name = "Enemy"
 		enemies.append(e)
-	_make_box(Vector3(0, 0.08, -10), Vector3(5, 0.15, 3), Color(0.95, 0.7, 0.15), false)
 
 func _make_box(pos: Vector3, size: Vector3, color: Color, solid: bool) -> Node3D:
 	var root: Node3D
@@ -69,6 +85,51 @@ func _make_box(pos: Vector3, size: Vector3, color: Color, solid: bool) -> Node3D
 	mat.albedo_color = color
 	mat.metallic = 0.08
 	mat.roughness = 0.7
+	mesh_instance.material_override = mat
+	root.add_child(mesh_instance)
+	root.position = pos
+	add_child(root)
+	return root
+
+func _make_cylinder(pos: Vector3, radius: float, height: float, color: Color, solid: bool) -> Node3D:
+	var root: Node3D = StaticBody3D.new() if solid else Node3D.new()
+	if solid:
+		var collision := CollisionShape3D.new()
+		var shape := CylinderShape3D.new()
+		shape.radius = radius
+		shape.height = height
+		collision.shape = shape
+		root.add_child(collision)
+	var mesh_instance := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = height
+	mesh_instance.mesh = mesh
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mesh_instance.material_override = mat
+	root.add_child(mesh_instance)
+	root.position = pos
+	add_child(root)
+	return root
+
+func _make_sphere(pos: Vector3, scale_value: Vector3, color: Color, solid: bool) -> Node3D:
+	var root: Node3D = StaticBody3D.new() if solid else Node3D.new()
+	if solid:
+		var collision := CollisionShape3D.new()
+		var shape := SphereShape3D.new()
+		shape.radius = 1.0
+		collision.shape = shape
+		collision.scale = scale_value
+		root.add_child(collision)
+	var mesh_instance := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh_instance.mesh = mesh
+	mesh_instance.scale = scale_value
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.roughness = 0.9
 	mesh_instance.material_override = mat
 	root.add_child(mesh_instance)
 	root.position = pos
