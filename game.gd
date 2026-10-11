@@ -354,8 +354,20 @@ func _physics_process(delta: float) -> void:
 	elif held.get("jump", false) or Input.is_key_pressed(KEY_SPACE):
 		player.velocity.y = JUMP_SPEED
 	player.move_and_slide()
+	if player.global_position.y < -8.0 or hp <= 0:
+		_respawn_player()
+		return
 	player.position.x = clampf(player.position.x, -13.0, 13.0)
 	player.position.z = clampf(player.position.z, -13.0, 13.0)
+
+func _respawn_player() -> void:
+	if not is_instance_valid(player):
+		return
+	player.global_position = Vector3(0, 1.5, 5)
+	player.velocity = Vector3.ZERO
+	hp = 100
+	status_label.text = "You respawned at the island spawn!"
+	_refresh_hud()
 
 func _train() -> void:
 	training = not training
