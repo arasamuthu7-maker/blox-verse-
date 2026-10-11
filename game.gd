@@ -12,6 +12,8 @@ var xp := 0
 var power := 0
 var hp := 100
 var money := 0
+var inventory: Array[String] = ["Wind Fruit", "Small Potion"]
+var equipped_fruit := "Wind Fruit"
 var quests: Array[Dictionary] = []
 var active_quest := -1
 var training := false
@@ -254,6 +256,9 @@ func _build_ui() -> void:
 	layer.add_child(status_label)
 	_build_move_pad(layer)
 	_add_button(layer, "QUEST", Vector2(-245, -325), "quest")
+	_add_button(layer, "BAG", Vector2(-245, -380), "bag")
+	_add_button(layer, "FRUIT", Vector2(-245, -435), "fruit")
+	_add_button(layer, "POTION", Vector2(-245, -490), "potion")
 	_add_button(layer, "JUMP", Vector2(-245, -160), "jump")
 	_add_button(layer, "TRAIN", Vector2(-245, -105), "train")
 	_add_button(layer, "ATTACK", Vector2(-245, -50), "attack")
@@ -291,6 +296,12 @@ func _add_button(layer: CanvasLayer, text_value: String, offset: Vector2, action
 		b.pressed.connect(_load_progress)
 	elif action == "quest":
 		b.pressed.connect(_interact_quest)
+	elif action == "bag":
+		b.pressed.connect(_show_inventory)
+	elif action == "fruit":
+		b.pressed.connect(_cycle_fruit)
+	elif action == "potion":
+		b.pressed.connect(_use_potion)
 	else:
 		b.pressed.connect(_attack)
 
@@ -361,6 +372,11 @@ func _attack() -> void:
 		xp += hit_count * 5
 		money += hit_count * 15
 		power += hit_count
+		if hit_count > 0 and randi_range(1, 100) <= 25:
+			var drops := ["Small Potion", "Leaf Material", "Fruit Shard"]
+			var drop: String = drops[randi_range(0, drops.size() - 1)]
+			inventory.append(drop)
+			status_label.text = "Item drop: " + drop
 		_check_quest_progress("bandit", hit_count)
 		status_label.text = "POWER HIT! +%d power" % hit_count
 	else:
@@ -374,6 +390,8 @@ func _save_progress() -> void:
 		"power": power,
 		"hp": hp,
 		"money": money,
+		"inventory": inventory,
+		"equipped_fruit": equipped_fruit,
 		"quests": quests,
 		"player_x": player.position.x if is_instance_valid(player) else 0.0,
 		"player_y": player.position.y if is_instance_valid(player) else 1.5,
@@ -393,6 +411,12 @@ func _load_progress() -> void:
 	power = maxi(0, int(data.get("power", 0)))
 	hp = clampi(int(data.get("hp", 100)), 1, 100)
 	money = maxi(0, int(data.get("money", 0)))
+	var saved_inventory: Variant = data.get("inventory", inventory)
+	if saved_inventory is Array:
+		inventory.clear()
+		for item in saved_inventory:
+			inventory.append(str(item))
+	equipped_fruit = str(data.get("equipped_fruit", "Wind Fruit"))
 	var saved_quests: Variant = data.get("quests", [])
 	if saved_quests is Array:
 		quests.clear()
@@ -463,6 +487,29 @@ func _check_quest_progress(kind: String, amount: int) -> void:
 		quests[i] = quest
 	_refresh_hud()
 
+func _show_inventory() -> void:
+	status_label.text = "BAG: " + ", ".join(inventory) + " | Equipped: " + equipped_fruit
+
+func _cycle_fruit() -> void:
+	var fruits := ["Wind Fruit", "Flame Fruit", "Frost Fruit", "Light Fruit"]
+	var index := fruits.find(equipped_fruit)
+	index = (index + 1) % fruits.size()
+	equipped_fruit = fruits[index]
+	if not inventory.has(equipped_fruit):
+		inventory.append(equipped_fruit)
+	status_label.text = "Equipped " + equipped_fruit + "! Tap ATTACK to use your power."
+	power += 1
+	_refresh_hud()
+
+func _use_potion() -> void:
+	if inventory.has("Small Potion"):
+		inventory.erase("Small Potion")
+		hp = mini(hp + 35, 100)
+		status_label.text = "Small Potion used: +35 HP."
+	else:
+		status_label.text = "No Small Potion left. Find one as a quest reward."
+	_refresh_hud()
+
 func _refresh_hud() -> void:
 	if is_instance_valid(hud):
-		hud.text = "BLOCK VERSE | LVL %d | XP %d/%d | POWER %d | HP %d | COINS %d" % [level, xp, level * 10, power, hp, money]
+		hud.text = "BLOCK VERSE | LVL %d | XP %d/%d | POWER %d | HP %d | COINS %d | FRUIT %s" % [level, xp, level * 10, power, hp, money, equipped_fruit]
