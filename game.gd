@@ -21,6 +21,7 @@ func _ready() -> void:
 	_build_world()
 	_build_player()
 	_build_ui()
+	_load_progress()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func _build_world() -> void:
@@ -119,6 +120,8 @@ func _build_ui() -> void:
 	_add_button(layer, "JUMP", Vector2(-245, -160), "jump")
 	_add_button(layer, "TRAIN", Vector2(-245, -105), "train")
 	_add_button(layer, "ATTACK", Vector2(-245, -50), "attack")
+	_add_button(layer, "SAVE", Vector2(-245, -215), "save")
+	_add_button(layer, "LOAD", Vector2(-245, -270), "load")
 	_refresh_hud()
 
 func _add_button(layer: CanvasLayer, text_value: String, offset: Vector2, action: String) -> void:
@@ -137,6 +140,10 @@ func _add_button(layer: CanvasLayer, text_value: String, offset: Vector2, action
 		b.button_up.connect(func(): held[action] = false)
 	elif action == "train":
 		b.pressed.connect(_train)
+	elif action == "save":
+		b.pressed.connect(_save_progress)
+	elif action == "load":
+		b.pressed.connect(_load_progress)
 	else:
 		b.pressed.connect(_attack)
 
@@ -191,6 +198,39 @@ func _attack() -> void:
 		status_label.text = "POWER HIT! +%d power" % hit_count
 	else:
 		status_label.text = "Get closer to a red enemy!"
+	_refresh_hud()
+
+func _save_progress() -> void:
+	var data := {
+		"level": level,
+		"xp": xp,
+		"power": power,
+		"hp": hp,
+		"player_x": player.position.x if is_instance_valid(player) else 0.0,
+		"player_y": player.position.y if is_instance_valid(player) else 1.5,
+		"player_z": player.position.z if is_instance_valid(player) else 5.0
+	}
+	if BlockVerseSave.save_game(data):
+		status_label.text = "Progress saved on this device!"
+
+func _load_progress() -> void:
+	var data := BlockVerseSave.load_game()
+	if data.is_empty():
+		if is_instance_valid(status_label):
+			status_label.text = "New adventure! Train and fight to grow."
+		return
+	level = maxi(1, int(data.get("level", 1)))
+	xp = maxi(0, int(data.get("xp", 0)))
+	power = maxi(0, int(data.get("power", 0)))
+	hp = clampi(int(data.get("hp", 100)), 1, 100)
+	if is_instance_valid(player):
+		player.position = Vector3(
+			float(data.get("player_x", 0.0)),
+			float(data.get("player_y", 1.5)),
+			float(data.get("player_z", 5.0))
+		)
+	if is_instance_valid(status_label):
+		status_label.text = "Progress loaded!"
 	_refresh_hud()
 
 func _refresh_hud() -> void:
