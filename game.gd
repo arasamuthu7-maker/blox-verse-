@@ -2,6 +2,7 @@ extends Node3D
 
 const MOVE_SPEED := 7.0
 const JUMP_SPEED := 7.0
+const MAX_LEVEL := 2050
 
 var player: CharacterBody3D
 var camera: Camera3D
@@ -25,6 +26,7 @@ var enemies: Array[Node3D] = []
 var arena_size := 28.0
 var current_island := "Starter Island"
 var island_level := 1
+var stat_points := 0
 
 func _ready() -> void:
 	_build_world()
@@ -273,6 +275,8 @@ func _build_ui() -> void:
 	_add_button(layer, "SAVE", Vector2(-245, -215), "save")
 	_add_button(layer, "LOAD", Vector2(-245, -270), "load")
 	_add_button(layer, "TRAVEL", Vector2(-245, -545), "travel")
+	_add_button(layer, "STATS", Vector2(-245, -600), "stats")
+	_add_button(layer, "FRUIT SHOP", Vector2(-245, -655), "fruit_shop")
 	_refresh_hud()
 
 func _build_move_pad(layer: CanvasLayer) -> void:
@@ -313,6 +317,10 @@ func _add_button(layer: CanvasLayer, text_value: String, offset: Vector2, action
 		b.pressed.connect(_use_potion)
 	elif action == "travel":
 		b.pressed.connect(_travel_island)
+	elif action == "stats":
+		b.pressed.connect(_show_stats)
+	elif action == "fruit_shop":
+		b.pressed.connect(_open_fruit_shop)
 	else:
 		b.pressed.connect(_attack)
 
@@ -326,7 +334,8 @@ func _process(delta: float) -> void:
 		xp += 1
 		if xp >= level * 10:
 			xp = 0
-			level += 1
+			level = mini(level + 1, MAX_LEVEL)
+			stat_points += 3
 			power += 2
 			status_label.text = "LEVEL UP! Power +2"
 		_refresh_hud()
@@ -388,7 +397,9 @@ func _travel_island() -> void:
 		{"name":"Starter Island", "pos":Vector3(-8, 1.5, 7), "level":1},
 		{"name":"Jungle Island", "pos":Vector3(0, 1.5, 7), "level":5},
 		{"name":"Snow Island", "pos":Vector3(8, 1.5, 7), "level":10},
-		{"name":"Volcano Island", "pos":Vector3(-8, 1.5, -7), "level":15}
+		{"name":"Volcano Island", "pos":Vector3(-8, 1.5, -7), "level":15},
+		{"name":"Sky Island", "pos":Vector3(8, 1.5, -7), "level":50},
+		{"name":"Sea Island", "pos":Vector3(0, 1.5, -11), "level":100}
 	]
 	var nearest: Dictionary = {}
 	var nearest_distance := 999.0
@@ -406,6 +417,12 @@ func _travel_island() -> void:
 	player.velocity = Vector3.ZERO
 	status_label.text = "Travelled to %s! Recommended level: %d." % [current_island, island_level]
 	_refresh_hud()
+
+func _show_stats() -> void:
+	status_label.text = "STATS | Level %d/%d | XP %d/%d | Power %d | HP %d/100 | Coins %d | Stat points %d" % [level, MAX_LEVEL, xp, level * 10, power, hp, money, stat_points]
+
+func _open_fruit_shop() -> void:
+	status_label.text = "FRUIT SHOP: tap FRUIT to cycle Wind, Flame, Frost and Light. Choose freely; no chance-based rolls."
 
 func _train() -> void:
 	training = not training
@@ -436,6 +453,7 @@ func _attack() -> void:
 func _save_progress() -> void:
 	var data := {
 		"level": level,
+		"stat_points": stat_points,
 		"xp": xp,
 		"power": power,
 		"hp": hp,
@@ -456,7 +474,8 @@ func _load_progress() -> void:
 		if is_instance_valid(status_label):
 			status_label.text = "New adventure! Train and fight to grow."
 		return
-	level = maxi(1, int(data.get("level", 1)))
+	level = clampi(int(data.get("level", 1)), 1, MAX_LEVEL)
+	stat_points = maxi(0, int(data.get("stat_points", 0)))
 	xp = maxi(0, int(data.get("xp", 0)))
 	power = maxi(0, int(data.get("power", 0)))
 	hp = clampi(int(data.get("hp", 100)), 1, 100)
@@ -532,7 +551,8 @@ func _check_quest_progress(kind: String, amount: int) -> void:
 			status_label.text = "QUEST COMPLETE! +%d XP, +%d coins" % [int(quest.get("reward_xp", 0)), int(quest.get("reward_money", 0))]
 			while xp >= level * 10:
 				xp -= level * 10
-				level += 1
+				level = mini(level + 1, MAX_LEVEL)
+			stat_points += 3
 				power += 2
 		quests[i] = quest
 	_refresh_hud()
@@ -562,4 +582,4 @@ func _use_potion() -> void:
 
 func _refresh_hud() -> void:
 	if is_instance_valid(hud):
-		hud.text = "BLOCK VERSE | %s (Lv.%d+) | LVL %d | XP %d/%d | POWER %d | HP %d | COINS %d | FRUIT %s" % [current_island, island_level, level, xp, level * 10, power, hp, money, equipped_fruit]
+		hud.text = "BLOCK VERSE | %s (Lv.%d+) | LVL %d/%d | XP %d/%d | POWER %d | HP %d | COINS %d | FRUIT %s" % [current_island, island_level, level, MAX_LEVEL, xp, level * 10, power, hp, money, equipped_fruit]
