@@ -13,6 +13,8 @@ var power := 0
 var hp := 100
 var training := false
 var attacking := false
+var animation_time := 0.0
+var body_mesh: MeshInstance3D
 var held := {}
 var enemies: Array[Node3D] = []
 var arena_size := 28.0
@@ -85,7 +87,7 @@ func _build_player() -> void:
 	collision.shape = capsule
 	collision.position.y = 0.9
 	player.add_child(collision)
-	var body_mesh := MeshInstance3D.new()
+	body_mesh = MeshInstance3D.new()
 	var capsule_mesh := CapsuleMesh.new()
 	capsule_mesh.radius = 0.45
 	capsule_mesh.height = 1.8
@@ -154,6 +156,7 @@ func _add_button(layer: CanvasLayer, text_value: String, offset: Vector2, action
 
 func _process(delta: float) -> void:
 	if is_instance_valid(player):
+		_update_player_animation(delta)
 		var target := player.global_position + Vector3(0, 4.5, 8.5)
 		camera.global_position = camera.global_position.lerp(target, min(delta * 5.0, 1.0))
 		camera.look_at(player.global_position + Vector3(0, 1.0, 0), Vector3.UP)
@@ -165,6 +168,23 @@ func _process(delta: float) -> void:
 			power += 2
 			status_label.text = "LEVEL UP! Power +2"
 		_refresh_hud()
+
+func _update_player_animation(delta: float) -> void:
+	if not is_instance_valid(body_mesh) or not is_instance_valid(player):
+		return
+	animation_time += delta
+	var moving := Vector2(player.velocity.x, player.velocity.z).length() > 0.25
+	if not player.is_on_floor():
+		body_mesh.position.y = 0.9 + sin(animation_time * 9.0) * 0.035
+		body_mesh.rotation.x = -0.12
+	elif moving:
+		body_mesh.position.y = 0.9 + absf(sin(animation_time * 10.0)) * 0.16
+		body_mesh.rotation.x = sin(animation_time * 10.0) * 0.08
+		body_mesh.rotation.z = sin(animation_time * 5.0) * 0.06
+	else:
+		body_mesh.position.y = 0.9 + sin(animation_time * 2.2) * 0.025
+		body_mesh.rotation.x = lerpf(body_mesh.rotation.x, 0.0, minf(delta * 8.0, 1.0))
+		body_mesh.rotation.z = lerpf(body_mesh.rotation.z, 0.0, minf(delta * 8.0, 1.0))
 
 func _physics_process(delta: float) -> void:
 	if not is_instance_valid(player):
