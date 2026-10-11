@@ -75,6 +75,8 @@ func _build_world() -> void:
 	_make_cylinder(Vector3(0, 0.06, 7), 1.35, 0.22, Color(0.3, 1.0, 0.45), false)
 	_make_cylinder(Vector3(8, 0.06, 7), 1.35, 0.22, Color(1.0, 0.4, 0.15), false)
 	_make_cylinder(Vector3(-8, 0.06, -7), 1.35, 0.22, Color(0.75, 0.55, 1.0), false)
+	_make_cylinder(Vector3(8, 0.06, -7), 1.35, 0.22, Color(0.75, 0.55, 1.0), false)
+	_make_cylinder(Vector3(0, 0.06, -11), 1.35, 0.22, Color(0.2, 0.85, 1.0), false)
 
 	# Friendly island NPCs and humanoid bandit enemies.
 	_build_npc(Vector3(2.5, 0.0, -7.0), "Island Guide", Color(0.12, 0.38, 0.85), false)
@@ -405,11 +407,15 @@ func _travel_island() -> void:
 	if nearest_distance > 3.0:
 		status_label.text = "Stand on a glowing travel pad, then tap TRAVEL."
 		return
+	var required_level := int(nearest["level"])
+	if level < required_level:
+		status_label.text = "%s unlocks at Level %d. Your level: %d." % [str(nearest["name"]), required_level, level]
+		return
 	current_island = str(nearest["name"])
-	island_level = int(nearest["level"])
-	player.global_position = Vector3(0, 1.5, 5)
+	island_level = required_level
+	player.global_position = nearest["pos"] + Vector3(0, 0.3, 0)
 	player.velocity = Vector3.ZERO
-	status_label.text = "Travelled to %s! Recommended level: %d." % [current_island, island_level]
+	status_label.text = "Travelled to %s! Recommended level: %d. Zones are still on one map." % [current_island, island_level]
 	_refresh_hud()
 
 func _add_xp(amount: int) -> void:
@@ -427,7 +433,13 @@ func _add_xp(amount: int) -> void:
 		xp = 0
 
 func _show_stats() -> void:
-	status_label.text = "STATS | Level %d/%d | XP %d/%d | Power %d | HP %d/100 | Coins %d | Stat points %d" % [level, MAX_LEVEL, xp, level * 10, power, hp, money, stat_points]
+	if stat_points > 0:
+		stat_points -= 1
+		power += 1
+		status_label.text = "Spent 1 stat point on Power! Power %d | Points left: %d" % [power, stat_points]
+	else:
+		status_label.text = "STATS | Level %d/%d | XP %d/%d | Power %d | HP %d/100 | Coins %d | Stat points %d. Level up to earn points, then tap STATS to spend 1 on Power." % [level, MAX_LEVEL, xp, level * 10, power, hp, money, stat_points]
+	_refresh_hud()
 
 func _open_fruit_shop() -> void:
 	status_label.text = "FRUIT SHOP: tap FRUIT to cycle Wind, Flame, Frost and Light. Choose freely; no chance-based rolls."
@@ -554,7 +566,6 @@ func _check_quest_progress(kind: String, amount: int) -> void:
 		quest["progress"] = progress
 		if progress >= int(quest.get("goal", 1)):
 			quest["done"] = true
-			xp += int(quest.get("reward_xp", 0))
 			money += int(quest.get("reward_money", 0))
 			status_label.text = "QUEST COMPLETE! +%d XP, +%d coins" % [int(quest.get("reward_xp", 0)), int(quest.get("reward_money", 0))]
 			_add_xp(int(quest.get("reward_xp", 0)))
