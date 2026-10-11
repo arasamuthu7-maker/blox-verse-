@@ -60,10 +60,40 @@ func _build_world() -> void:
 	_make_cylinder(Vector3(0, 0.05, -9.0), 2.5, 0.25, Color(0.22, 0.35, 0.55), false)
 	_make_cylinder(Vector3(0, 0.22, -9.0), 1.7, 0.12, Color(0.15, 0.65, 1.0), false)
 
+	# Friendly island NPCs and humanoid bandit enemies.
+	_build_npc(Vector3(2.5, 0.0, -7.0), "Island Guide", Color(0.12, 0.38, 0.85), false)
+	_build_npc(Vector3(-3.0, 0.0, -8.0), "Trainer", Color(0.12, 0.65, 0.38), false)
+	_build_npc(Vector3(7.0, 0.0, 2.0), "Merchant", Color(0.65, 0.35, 0.82), false)
 	for i in range(4):
-		var e := _make_box(Vector3(-7 + i * 4, 1, -4), Vector3(1.1, 1.8, 1.1), Color(0.82, 0.16, 0.2), true)
-		e.name = "Enemy"
-		enemies.append(e)
+		var enemy := _build_npc(Vector3(-7 + i * 4, 0.0, -3.0), "Bandit", Color(0.72, 0.12, 0.14), true)
+		enemies.append(enemy)
+
+func _build_npc(pos: Vector3, npc_name: String, outfit_color: Color, hostile: bool) -> Node3D:
+	var npc := Node3D.new()
+	npc.name = npc_name.replace(" ", "")
+	npc.position = pos
+	add_child(npc)
+	# Simple humanoid proportions assembled from meshes; these are game objects, not poster art.
+	_add_character_part(npc, "Body", Vector3(0, 1.0, 0), Vector3(0.72, 0.92, 0.38), outfit_color, "box")
+	_add_character_part(npc, "Head", Vector3(0, 1.82, 0), Vector3(0.58, 0.62, 0.55), Color(0.91, 0.69, 0.53), "sphere")
+	_add_character_part(npc, "Hair", Vector3(0, 2.08, -0.04), Vector3(0.62, 0.32, 0.58), Color(0.055, 0.045, 0.04), "sphere")
+	_add_character_part(npc, "LeftArm", Vector3(-0.48, 1.05, 0), Vector3(0.20, 0.68, 0.22), outfit_color.darkened(0.18), "box")
+	_add_character_part(npc, "RightArm", Vector3(0.48, 1.05, 0), Vector3(0.20, 0.68, 0.22), outfit_color.darkened(0.18), "box")
+	_add_character_part(npc, "LeftLeg", Vector3(-0.20, 0.38, 0), Vector3(0.23, 0.60, 0.25), Color(0.10, 0.11, 0.15), "box")
+	_add_character_part(npc, "RightLeg", Vector3(0.20, 0.38, 0), Vector3(0.23, 0.60, 0.25), Color(0.10, 0.11, 0.15), "box")
+	_add_character_part(npc, "LeftEye", Vector3(-0.13, 1.84, 0.28), Vector3(0.075, 0.06, 0.035), Color(0.08, 0.08, 0.08), "sphere")
+	_add_character_part(npc, "RightEye", Vector3(0.13, 1.84, 0.28), Vector3(0.075, 0.06, 0.035), Color(0.08, 0.08, 0.08), "sphere")
+	var tag := Label3D.new()
+	tag.text = npc_name
+	tag.position = Vector3(0, 2.55, 0)
+	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	tag.font_size = 32
+	tag.outline_size = 6
+	tag.modulate = Color(1.0, 0.45, 0.4) if hostile else Color(0.55, 1.0, 0.75)
+	npc.add_child(tag)
+	if hostile:
+		_add_character_part(npc, "BanditScarf", Vector3(0, 1.48, 0.08), Vector3(0.62, 0.18, 0.42), Color(0.28, 0.035, 0.04), "box")
+	return npc
 
 func _make_box(pos: Vector3, size: Vector3, color: Color, solid: bool) -> Node3D:
 	var root: Node3D
@@ -177,7 +207,7 @@ func _build_player() -> void:
 	mat.albedo_color = Color(0.2, 0.35, 1.0)
 	body_mesh.material_override = mat
 	body_mesh.position.y = 0.9
-		player.add_child(body_mesh)
+	player.add_child(body_mesh)
 	# Anime-inspired head, hair, face, scarf, coat, arms, and boots.
 	_add_character_part(player, "Head", Vector3(0, 1.95, 0), Vector3(0.66, 0.72, 0.62), Color(0.94, 0.72, 0.57), "sphere")
 	_add_character_part(player, "Hair", Vector3(0, 2.28, -0.08), Vector3(0.72, 0.48, 0.68), Color(0.035, 0.045, 0.07), "sphere")
