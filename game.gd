@@ -23,6 +23,8 @@ var body_mesh: MeshInstance3D
 var held := {}
 var enemies: Array[Node3D] = []
 var arena_size := 28.0
+var current_island := "Starter Island"
+var island_level := 1
 
 func _ready() -> void:
 	_build_world()
@@ -65,6 +67,12 @@ func _build_world() -> void:
 	_make_sphere(Vector3(8.5, 0.55, -6.5), Vector3(3.8, 1.8, 3.0), Color(0.42, 0.43, 0.37), false)
 	_make_cylinder(Vector3(0, 0.05, -9.0), 2.5, 0.25, Color(0.22, 0.35, 0.55), false)
 	_make_cylinder(Vector3(0, 0.22, -9.0), 1.7, 0.12, Color(0.15, 0.65, 1.0), false)
+
+	# Glowing travel pads for island hopping.
+	_make_cylinder(Vector3(-8, 0.06, 7), 1.35, 0.22, Color(0.15, 0.8, 1.0), false)
+	_make_cylinder(Vector3(0, 0.06, 7), 1.35, 0.22, Color(0.3, 1.0, 0.45), false)
+	_make_cylinder(Vector3(8, 0.06, 7), 1.35, 0.22, Color(1.0, 0.4, 0.15), false)
+	_make_cylinder(Vector3(-8, 0.06, -7), 1.35, 0.22, Color(0.75, 0.55, 1.0), false)
 
 	# Friendly island NPCs and humanoid bandit enemies.
 	_build_npc(Vector3(2.5, 0.0, -7.0), "Island Guide", Color(0.12, 0.38, 0.85), false)
@@ -264,6 +272,7 @@ func _build_ui() -> void:
 	_add_button(layer, "ATTACK", Vector2(-245, -50), "attack")
 	_add_button(layer, "SAVE", Vector2(-245, -215), "save")
 	_add_button(layer, "LOAD", Vector2(-245, -270), "load")
+	_add_button(layer, "TRAVEL", Vector2(-245, -545), "travel")
 	_refresh_hud()
 
 func _build_move_pad(layer: CanvasLayer) -> void:
@@ -302,6 +311,8 @@ func _add_button(layer: CanvasLayer, text_value: String, offset: Vector2, action
 		b.pressed.connect(_cycle_fruit)
 	elif action == "potion":
 		b.pressed.connect(_use_potion)
+	elif action == "travel":
+		b.pressed.connect(_travel_island)
 	else:
 		b.pressed.connect(_attack)
 
@@ -367,6 +378,33 @@ func _respawn_player() -> void:
 	player.velocity = Vector3.ZERO
 	hp = 100
 	status_label.text = "You respawned at the island spawn!"
+	_refresh_hud()
+
+
+func _travel_island() -> void:
+	if not is_instance_valid(player):
+		return
+	var pads: Array[Dictionary] = [
+		{"name":"Starter Island", "pos":Vector3(-8, 1.5, 7), "level":1},
+		{"name":"Jungle Island", "pos":Vector3(0, 1.5, 7), "level":5},
+		{"name":"Snow Island", "pos":Vector3(8, 1.5, 7), "level":10},
+		{"name":"Volcano Island", "pos":Vector3(-8, 1.5, -7), "level":15}
+	]
+	var nearest: Dictionary = {}
+	var nearest_distance := 999.0
+	for pad in pads:
+		var d: float = player.global_position.distance_to(pad["pos"])
+		if d < nearest_distance:
+			nearest_distance = d
+			nearest = pad
+	if nearest_distance > 3.0:
+		status_label.text = "Stand on a glowing travel pad, then tap TRAVEL."
+		return
+	current_island = str(nearest["name"])
+	island_level = int(nearest["level"])
+	player.global_position = Vector3(0, 1.5, 5)
+	player.velocity = Vector3.ZERO
+	status_label.text = "Travelled to %s! Recommended level: %d." % [current_island, island_level]
 	_refresh_hud()
 
 func _train() -> void:
@@ -524,4 +562,4 @@ func _use_potion() -> void:
 
 func _refresh_hud() -> void:
 	if is_instance_valid(hud):
-		hud.text = "BLOCK VERSE | LVL %d | XP %d/%d | POWER %d | HP %d | COINS %d | FRUIT %s" % [level, xp, level * 10, power, hp, money, equipped_fruit]
+		hud.text = "BLOCK VERSE | %s (Lv.%d+) | LVL %d | XP %d/%d | POWER %d | HP %d | COINS %d | FRUIT %s" % [current_island, island_level, level, xp, level * 10, power, hp, money, equipped_fruit]
