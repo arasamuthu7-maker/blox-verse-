@@ -136,6 +136,26 @@ func _make_sphere(pos: Vector3, scale_value: Vector3, color: Color, solid: bool)
 	add_child(root)
 	return root
 
+func _add_character_part(parent: Node3D, part_name: String, local_pos: Vector3, part_scale: Vector3, color: Color, shape_kind: String) -> void:
+	var part := MeshInstance3D.new()
+	part.name = part_name
+	if shape_kind == "box":
+		var mesh := BoxMesh.new()
+		mesh.size = part_scale
+		part.mesh = mesh
+	else:
+		var mesh := SphereMesh.new()
+		mesh.radius = 0.5
+		mesh.height = 1.0
+		part.mesh = mesh
+		part.scale = part_scale
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.roughness = 0.78
+	part.material_override = mat
+	part.position = local_pos
+	parent.add_child(part)
+
 func _build_player() -> void:
 	player = CharacterBody3D.new()
 	player.name = "Player"
@@ -157,7 +177,20 @@ func _build_player() -> void:
 	mat.albedo_color = Color(0.2, 0.35, 1.0)
 	body_mesh.material_override = mat
 	body_mesh.position.y = 0.9
-	player.add_child(body_mesh)
+		player.add_child(body_mesh)
+	# Anime-inspired head, hair, face, scarf, coat, arms, and boots.
+	_add_character_part(player, "Head", Vector3(0, 1.95, 0), Vector3(0.66, 0.72, 0.62), Color(0.94, 0.72, 0.57), "sphere")
+	_add_character_part(player, "Hair", Vector3(0, 2.28, -0.08), Vector3(0.72, 0.48, 0.68), Color(0.035, 0.045, 0.07), "sphere")
+	_add_character_part(player, "Fringe", Vector3(0, 2.15, 0.43), Vector3(0.52, 0.22, 0.18), Color(0.025, 0.03, 0.05), "sphere")
+	_add_character_part(player, "LeftEye", Vector3(-0.17, 1.99, 0.53), Vector3(0.10, 0.07, 0.045), Color(0.12, 0.78, 1.0), "sphere")
+	_add_character_part(player, "RightEye", Vector3(0.17, 1.99, 0.53), Vector3(0.10, 0.07, 0.045), Color(0.12, 0.78, 1.0), "sphere")
+	_add_character_part(player, "RedScarf", Vector3(0, 1.48, -0.12), Vector3(0.78, 0.25, 0.55), Color(0.86, 0.035, 0.08), "box")
+	_add_character_part(player, "ScarfTail", Vector3(0.28, 1.35, -0.55), Vector3(0.22, 0.78, 0.12), Color(0.9, 0.025, 0.07), "box")
+	_add_character_part(player, "CoatFront", Vector3(0, 0.95, 0.34), Vector3(0.78, 0.82, 0.16), Color(0.045, 0.055, 0.08), "box")
+	_add_character_part(player, "LeftArm", Vector3(-0.57, 1.05, 0.02), Vector3(0.22, 0.72, 0.24), Color(0.06, 0.07, 0.1), "box")
+	_add_character_part(player, "RightArm", Vector3(0.57, 1.05, 0.02), Vector3(0.22, 0.72, 0.24), Color(0.06, 0.07, 0.1), "box")
+	_add_character_part(player, "LeftBoot", Vector3(-0.24, 0.16, 0.12), Vector3(0.34, 0.25, 0.48), Color(0.025, 0.03, 0.05), "box")
+	_add_character_part(player, "RightBoot", Vector3(0.24, 0.16, 0.12), Vector3(0.34, 0.25, 0.48), Color(0.025, 0.03, 0.05), "box")
 	camera = Camera3D.new()
 	camera.current = true
 	camera.fov = 75
