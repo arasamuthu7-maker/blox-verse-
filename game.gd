@@ -113,10 +113,7 @@ func _build_ui() -> void:
 	status_label.add_theme_font_size_override("font_size", 18)
 	status_label.add_theme_color_override("font_color", Color(1, 0.95, 0.55))
 	layer.add_child(status_label)
-	_add_button(layer, "↑", Vector2(105, -155), "forward")
-	_add_button(layer, "↓", Vector2(105, -65), "back")
-	_add_button(layer, "←", Vector2(15, -110), "left")
-	_add_button(layer, "→", Vector2(195, -110), "right")
+	_build_move_pad(layer)
 	_add_button(layer, "JUMP", Vector2(-245, -160), "jump")
 	_add_button(layer, "TRAIN", Vector2(-245, -105), "train")
 	_add_button(layer, "ATTACK", Vector2(-245, -50), "attack")
@@ -124,12 +121,20 @@ func _build_ui() -> void:
 	_add_button(layer, "LOAD", Vector2(-245, -270), "load")
 	_refresh_hud()
 
-func _add_button(layer: CanvasLayer, text_value: String, offset: Vector2, action: String) -> void:
+func _build_move_pad(layer: CanvasLayer) -> void:
+	# A compact D-pad on the lower-left, positioned with anchors so it stays on screen.
+	_add_button(layer, "▲", Vector2(92, -174), "forward", false)
+	_add_button(layer, "▼", Vector2(92, -62), "back", false)
+	_add_button(layer, "◀", Vector2(36, -118), "left", false)
+	_add_button(layer, "▶", Vector2(148, -118), "right", false)
+
+func _add_button(layer: CanvasLayer, text_value: String, offset: Vector2, action: String, right_side: bool = true) -> void:
 	var b := Button.new()
 	b.text = text_value
 	b.custom_minimum_size = Vector2(76, 48)
-	b.anchor_left = 1.0 if offset.x < 0 else 0.0
-	b.anchor_right = 1.0 if offset.x < 0 else 0.0
+	var use_right_side := right_side
+	b.anchor_left = 1.0 if use_right_side else 0.0
+	b.anchor_right = 1.0 if use_right_side else 0.0
 	b.anchor_top = 1.0
 	b.anchor_bottom = 1.0
 	b.position = offset
