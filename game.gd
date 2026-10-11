@@ -330,14 +330,8 @@ func _process(delta: float) -> void:
 		var target := player.global_position + Vector3(0, 4.5, 8.5)
 		camera.global_position = camera.global_position.lerp(target, min(delta * 5.0, 1.0))
 		camera.look_at(player.global_position + Vector3(0, 1.0, 0), Vector3.UP)
-	if training:
-		xp += 1
-		if xp >= level * 10:
-			xp = 0
-			level = mini(level + 1, MAX_LEVEL)
-			stat_points += 3
-			power += 2
-			status_label.text = "LEVEL UP! Power +2"
+	if training and level < MAX_LEVEL:
+		_add_xp(1)
 		_refresh_hud()
 
 func _update_player_animation(delta: float) -> void:
@@ -418,6 +412,20 @@ func _travel_island() -> void:
 	status_label.text = "Travelled to %s! Recommended level: %d." % [current_island, island_level]
 	_refresh_hud()
 
+func _add_xp(amount: int) -> void:
+	if level >= MAX_LEVEL:
+		xp = 0
+		return
+	xp += maxi(amount, 0)
+	while level < MAX_LEVEL and xp >= level * 10:
+		xp -= level * 10
+		level += 1
+		stat_points += 3
+		power += 2
+		status_label.text = "LEVEL UP! Level %d/%d | +3 stat points | Power +2" % [level, MAX_LEVEL]
+	if level >= MAX_LEVEL:
+		xp = 0
+
 func _show_stats() -> void:
 	status_label.text = "STATS | Level %d/%d | XP %d/%d | Power %d | HP %d/100 | Coins %d | Stat points %d" % [level, MAX_LEVEL, xp, level * 10, power, hp, money, stat_points]
 
@@ -436,7 +444,7 @@ func _attack() -> void:
 			enemy.queue_free()
 			hit_count += 1
 	if hit_count > 0:
-		xp += hit_count * 5
+		_add_xp(hit_count * 5)
 		money += hit_count * 15
 		power += hit_count
 		if hit_count > 0 and randi_range(1, 100) <= 25:
@@ -549,11 +557,7 @@ func _check_quest_progress(kind: String, amount: int) -> void:
 			xp += int(quest.get("reward_xp", 0))
 			money += int(quest.get("reward_money", 0))
 			status_label.text = "QUEST COMPLETE! +%d XP, +%d coins" % [int(quest.get("reward_xp", 0)), int(quest.get("reward_money", 0))]
-			while xp >= level * 10:
-				xp -= level * 10
-				level = mini(level + 1, MAX_LEVEL)
-			stat_points += 3
-				power += 2
+			_add_xp(int(quest.get("reward_xp", 0)))
 		quests[i] = quest
 	_refresh_hud()
 
